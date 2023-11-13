@@ -40,6 +40,17 @@ function Swap(props) {
     }
   }
 
+  function switchTokens() {
+    setPrices(null);
+    setTokenOneAmount(null);
+    setTokenTwoAmount(null);
+    const one = tokenOne;
+    const two = tokenTwo;
+    setTokenOne(two);
+    setTokenTwo(one);
+    fetchPrices(two.address, one.address);
+  }
+
   const settings = (
     <>
       <div>Slippage Tolerance</div>
@@ -76,7 +87,19 @@ function Swap(props) {
             disabled={!prices}
           />
           <Input placeholder="0" value={tokenTwoAmount} disabled={true} />
-          <div className="assetOne"></div>
+          <div className="switchButton" onClick={switchTokens}>
+            <ArrowDownOutlined className="switchArrow" />
+          </div>
+          <div className="assetOne">
+          <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
+            {tokenOne.ticker}
+            <DownOutlined />
+          </div>
+          <div className="assetTwo">
+          <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
+            {tokenTwo.ticker}
+            <DownOutlined />
+          </div>
         </div>
     </div>
   )
