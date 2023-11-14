@@ -51,6 +51,26 @@ function Swap(props) {
     fetchPrices(two.address, one.address);
   }
 
+  function openModal(asset) {
+    setChangeToken(asset);
+    setIsOpen(true);
+  }
+
+  function modifyToken(i){
+    setPrices(null);
+    setTokenOneAmount(null);
+    setTokenTwoAmount(null);
+    if (changeToken === 1) {
+      setTokenOne(tokenList[i]);
+      fetchPrices(tokenList[i].address, tokenTwo.address)
+    } else {
+      setTokenTwo(tokenList[i]);
+      fetchPrices(tokenOne.address, tokenList[i].address)
+    }
+    setIsOpen(false);
+  }
+
+
   const settings = (
     <>
       <div>Slippage Tolerance</div>
@@ -66,6 +86,31 @@ function Swap(props) {
   );
 
   return (
+    <>
+    <Modal
+    open={isOpen}
+    footer={null}
+    onCancel={() => setIsOpen(false)}
+    title="Select a token"
+    >
+      <div className="modalContent">
+      {tokenList?.map((e, i) => {
+            return (
+              <div
+                className="tokenChoice"
+                key={i}
+                onClick={() => modifyToken(i)}
+              >
+                <img src={e.img} alt={e.ticker} className="tokenLogo" />
+                <div className="tokenChoiceNames">
+                  <div className="tokenName">{e.name}</div>
+                  <div className="tokenTicker">{e.ticker}</div>
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    </Modal>
     <div className="tradebox">
     <div className="tradeBoxHeader">
       <h4>Swap</h4>
@@ -90,18 +135,21 @@ function Swap(props) {
           <div className="switchButton" onClick={switchTokens}>
             <ArrowDownOutlined className="switchArrow" />
           </div>
-          <div className="assetOne">
+          <div className="assetOne" onClick={() => openModal(1)}>
           <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
             {tokenOne.ticker}
             <DownOutlined />
           </div>
-          <div className="assetTwo">
+          <div className="assetTwo" onClick={() => openModal(2)}>
           <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
             {tokenTwo.ticker}
             <DownOutlined />
           </div>
         </div>
+        <div className="swapButton" disabled={!tokenOneAmount || !isConnected} onClick={fetchDexSwap}>Swap</div>
+      
     </div>
+    </>
   )
 }
 
