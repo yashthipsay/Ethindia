@@ -9,7 +9,6 @@ import tokenList from "../tokenList.json";
 import axios from "axios";
 import { useSendTransaction, useWaitForTransaction } from "wagmi";
 
-
 function Swap(props) {
   const { address, isConnected } = props;
   const [messageApi, contextHolder] = message.useMessage();
@@ -22,19 +21,26 @@ function Swap(props) {
   const [changeToken, setChangeToken] = useState(1);
   const [prices, setPrices] = useState(null);
   const [txDetails, setTxDetails] = useState({
-    to:null,
+    to: null,
     data: null,
     value: null,
-  }); 
+  });
+  const [inrPrice, setInrPrice] = useState(null);
+ 
 
-  const {data, sendTransaction} = useSendTransaction({
+  
+
+
+
+
+  const { data, sendTransaction } = useSendTransaction({
     request: {
       from: address,
       to: String(txDetails.to),
       data: String(txDetails.data),
       value: String(txDetails.value),
-    }
-  })
+    },
+  });
 
   function handleSlippageChange(e) {
     setSlippage(e.target.value);
@@ -42,9 +48,9 @@ function Swap(props) {
 
   function changeAmount(e) {
     setTokenOneAmount(e.target.value);
-    if(e.target.value && prices){
-      setTokenTwoAmount((e.target.value * prices.ratio).toFixed(2))
-    }else{
+    if (e.target.value && prices) {
+      setTokenTwoAmount((e.target.value * prices.ratio).toFixed(2));
+    } else {
       setTokenTwoAmount(null);
     }
   }
@@ -65,68 +71,77 @@ function Swap(props) {
     setIsOpen(true);
   }
 
-  function modifyToken(i){
+  function modifyToken(i) {
     setPrices(null);
     setTokenOneAmount(null);
     setTokenTwoAmount(null);
     if (changeToken === 1) {
       setTokenOne(tokenList[i]);
-      fetchPrices(tokenList[i].address, tokenTwo.address)
+      fetchPrices(tokenList[i].address, tokenTwo.address);
     } else {
       setTokenTwo(tokenList[i]);
-      fetchPrices(tokenOne.address, tokenList[i].address)
+      fetchPrices(tokenOne.address, tokenList[i].address);
     }
     setIsOpen(false);
   }
 
-  async function fetchPrices(one, two){
-
+  async function fetchPrices(one, two) {
     const res = await axios.get(`http://localhost:3001/tokenPrice`, {
-      params: {addressOne: one, addressTwo: two}
-    })
-    console.log(res.data)
-    setPrices(res.data)
-}
-
-async function fetchDexSwap(){
-
-  const allowance = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`)
-
-  if(allowance.data.allowance === "0"){
-
-    const approve = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/transaction?tokenAddress=${tokenOne.address}`)
-
-    setTxDetails(approve.data);
-    console.log("not approved")
-    return
-
+      params: { addressOne: one, addressTwo: two },
+    });
+    console.log(res.data);
+    setPrices(res.data);
   }
 
-  const tx = await axios.get(
-    `https://api.1inch.dev/swap/v5.2/1/swap?fromTokenAddress=${tokenOne.address}&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(tokenOne.decimals+tokenOneAmount.length, '0')}&fromAddress=${address}&slippage=${slippage}`
-  )
+  async function fetchDexSwap() {
+    const allowance = await axios.get(
+      `https://api.1inch.dev/swap/v5.2/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`
+    );
 
-  let decimals = Number(`1E${tokenTwo.decimals}`)
-  setTokenTwoAmount((Number(tx.data.toTokenAmount)/decimals).toFixed(2));
+    if (allowance.data.allowance === "0") {
+      const approve = await axios.get(
+        `https://api.1inch.dev/swap/v5.2/1/approve/transaction?tokenAddress=${tokenOne.address}`
+      );
 
-  setTxDetails(tx.data.tx);
+      setTxDetails(approve.data);
+      console.log("not approved");
+      return;
+    }
 
-}
+    const tx = await axios.get(
+      `https://api.1inch.dev/swap/v5.2/1/swap?fromTokenAddress=${
+        tokenOne.address
+      }&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(
+        tokenOne.decimals + tokenOneAmount.length,
+        "0"
+      )}&fromAddress=${address}&slippage=${slippage}`
+    );
 
+    let decimals = Number(`1E${tokenTwo.decimals}`);
+    setTokenTwoAmount((Number(tx.data.toTokenAmount) / decimals).toFixed(2));
 
-
-useEffect(()=>{
-
-  fetchPrices(tokenList[0].address, tokenList[1].address)
-
-}, [])
-
-useEffect(()=>{
-
-  if(txDetails.to && isConnected){
-    sendTransaction();
+    setTxDetails(tx.data.tx);
   }
-}, [txDetails])
+
+  useEffect(() => {
+    fetchPrices(tokenList[0].address, tokenList[1].address);
+  }, []);
+
+  useEffect(() => {
+    if (txDetails.to && isConnected) {
+      sendTransaction();
+    }
+  }, [txDetails]);
+
+  async function setCurrency(){
+    const response = await fetch(
+      "https://api.exchangerate-api.com/v4/latest/USD"
+    );
+    const data = await response.json();
+    const usdToInrRate = data.rates.INR; 
+    
+
+  }
 
   const settings = (
     <>
@@ -137,21 +152,33 @@ useEffect(()=>{
           <Radio.Button value={2.5}>2.5%</Radio.Button>
           <Radio.Button value={5}>5.0%</Radio.Button>
         </Radio.Group>
-        
+      </div>
+    </>
+  );
+  const currencies = (
+    <>
+      <div>Slippage Tolerance</div>
+      <div>
+        <Radio.Group value={slippage} onChange={handleSlippageChange}>
+          <Radio.Button value={0.5}>0.5%</Radio.Button>
+          <Radio.Button value={2.5}>2.5%</Radio.Button>
+          <Radio.Button value={5}>5.0%</Radio.Button>
+        </Radio.Group>
       </div>
     </>
   );
 
   return (
     <>
-    <Modal
-    open={isOpen}
-    footer={null}
-    onCancel={() => setIsOpen(false)}
-    title="Select a token"
-    >
-      <div className="modalContent">
-      {tokenList?.map((e, i) => {
+      
+      <Modal
+        open={isOpen}
+        footer={null}
+        onCancel={() => setIsOpen(false)}
+        title="Select a token"
+      >
+        <div className="modalContent">
+          {tokenList?.map((e, i) => {
             return (
               <div
                 className="tokenChoice"
@@ -166,23 +193,22 @@ useEffect(()=>{
               </div>
             );
           })}
-      </div>
-    </Modal>
-    <div className="tradebox">
-    <div className="tradeBoxHeader">
-      <h4>Swap</h4>
-      <Popover
-      content = {settings}
-      title="Settings"
-      trigger="click"
-      placement="bottomRight"
-      >
-
-      <SettingOutlined className="cog" />
-      </Popover>
-    </div>
-    <div className="inputs">
-        <Input
+        </div>
+      </Modal>
+      <div className="tradebox">
+        <div className="tradeBoxHeader">
+          <h4>Swap</h4>
+          <Popover
+            content={settings}
+            title="Settings"
+            trigger="click"
+            placement="bottomRight"
+          >
+            <SettingOutlined className="cog" />
+          </Popover>
+        </div>
+        <div className="inputs">
+          <Input
             placeholder="0"
             value={tokenOneAmount}
             onChange={changeAmount}
@@ -193,21 +219,26 @@ useEffect(()=>{
             <ArrowDownOutlined className="switchArrow" />
           </div>
           <div className="assetOne" onClick={() => openModal(1)}>
-          <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
+            <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
             {tokenOne.ticker}
             <DownOutlined />
           </div>
           <div className="assetTwo" onClick={() => openModal(2)}>
-          <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
+            <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
             {tokenTwo.ticker}
             <DownOutlined />
           </div>
         </div>
-        <div className="swapButton" disabled={!tokenOneAmount || !isConnected} onClick={fetchDexSwap}>Swap</div>
-      
-    </div>
+        <div
+          className="swapButton"
+          disabled={!tokenOneAmount || !isConnected}
+          onClick={fetchDexSwap}
+        >
+          Swap
+        </div>
+      </div>
     </>
-  )
+  );
 }
 
-export default Swap
+export default Swap;
