@@ -70,6 +70,23 @@ function Swap(props) {
     setIsOpen(false);
   }
 
+  async function fetchPrices(one, two){
+
+    const res = await axios.get(`http://localhost:3001/tokenPrice`, {
+      params: {addressOne: one, addressTwo: two}
+    })
+
+   
+
+    
+    setPrices(res.data)
+}
+
+useEffect(()=>{
+
+  fetchPrices(tokenList[0].address, tokenList[1].address)
+
+}, [])
 
   const settings = (
     <>
