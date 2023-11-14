@@ -84,7 +84,7 @@ function Swap(props) {
     const res = await axios.get(`http://localhost:3001/tokenPrice`, {
       params: {addressOne: one, addressTwo: two}
     })
-
+    console.log(res.data)
     setPrices(res.data)
 }
 

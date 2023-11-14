@@ -17,6 +17,7 @@
     "wagmi": "^0.10.11",
     "web-vitals": "^2.1.4"
   },
+  "proxy": "https://api.1inch.dev",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
