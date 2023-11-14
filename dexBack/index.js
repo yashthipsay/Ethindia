@@ -79,7 +79,7 @@ const krwPrices = {
 }
 
   
-  return res.status(200).json({usdPrices, inrPrices, sgdPrices, myrPrices, idrPrices, jpyPrices, krwPrices});
+  return res.status(200).json(usdPrices);
 });
 
 Moralis.start({

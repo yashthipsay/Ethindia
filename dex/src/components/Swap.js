@@ -27,6 +27,15 @@ function Swap(props) {
     value: null,
   }); 
 
+  const {data, sendTransaction} = useSendTransaction({
+    request: {
+      from: address,
+      to: String(txDetails.to),
+      data: String(txDetails.data),
+      value: String(txDetails.value),
+    }
+  })
+
   function handleSlippageChange(e) {
     setSlippage(e.target.value);
   }
@@ -76,17 +85,48 @@ function Swap(props) {
       params: {addressOne: one, addressTwo: two}
     })
 
-   
-
-    
     setPrices(res.data)
 }
+
+async function fetchDexSwap(){
+
+  const allowance = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`)
+
+  if(allowance.data.allowance === "0"){
+
+    const approve = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/transaction?tokenAddress=${tokenOne.address}`)
+
+    setTxDetails(approve.data);
+    console.log("not approved")
+    return
+
+  }
+
+  const tx = await axios.get(
+    `https://api.1inch.dev/swap/v5.2/1/swap?fromTokenAddress=${tokenOne.address}&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(tokenOne.decimals+tokenOneAmount.length, '0')}&fromAddress=${address}&slippage=${slippage}`
+  )
+
+  let decimals = Number(`1E${tokenTwo.decimals}`)
+  setTokenTwoAmount((Number(tx.data.toTokenAmount)/decimals).toFixed(2));
+
+  setTxDetails(tx.data.tx);
+
+}
+
+
 
 useEffect(()=>{
 
   fetchPrices(tokenList[0].address, tokenList[1].address)
 
 }, [])
+
+useEffect(()=>{
+
+  if(txDetails.to && isConnected){
+    sendTransaction();
+  }
+}, [txDetails])
 
   const settings = (
     <>

@@ -3,7 +3,10 @@ import Logo from "../moralis-logo.svg";
 import Eth from "../eth.svg";
 import { Link } from "react-router-dom";
 
-function Header() {
+function Header(props) {
+
+  const {address, isConnected, connect} = props;
+
   return (
     <header>
       <div className="leftH">
