@@ -27,6 +27,15 @@ function Swap(props) {
     value: null,
   }); 
 
+  const {data, sendTransaction} = useSendTransaction({
+    request: {
+      from: address,
+      to: String(txDetails.to),
+      data: String(txDetails.data),
+      value: String(txDetails.value),
+    }
+  })
+
   function handleSlippageChange(e) {
     setSlippage(e.target.value);
   }
@@ -39,6 +48,85 @@ function Swap(props) {
       setTokenTwoAmount(null);
     }
   }
+
+  function switchTokens() {
+    setPrices(null);
+    setTokenOneAmount(null);
+    setTokenTwoAmount(null);
+    const one = tokenOne;
+    const two = tokenTwo;
+    setTokenOne(two);
+    setTokenTwo(one);
+    fetchPrices(two.address, one.address);
+  }
+
+  function openModal(asset) {
+    setChangeToken(asset);
+    setIsOpen(true);
+  }
+
+  function modifyToken(i){
+    setPrices(null);
+    setTokenOneAmount(null);
+    setTokenTwoAmount(null);
+    if (changeToken === 1) {
+      setTokenOne(tokenList[i]);
+      fetchPrices(tokenList[i].address, tokenTwo.address)
+    } else {
+      setTokenTwo(tokenList[i]);
+      fetchPrices(tokenOne.address, tokenList[i].address)
+    }
+    setIsOpen(false);
+  }
+
+  async function fetchPrices(one, two){
+
+    const res = await axios.get(`http://localhost:3001/tokenPrice`, {
+      params: {addressOne: one, addressTwo: two}
+    })
+    console.log(res.data)
+    setPrices(res.data)
+}
+
+async function fetchDexSwap(){
+
+  const allowance = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/allowance?tokenAddress=${tokenOne.address}&walletAddress=${address}`)
+
+  if(allowance.data.allowance === "0"){
+
+    const approve = await axios.get(`https://api.1inch.dev/swap/v5.2/1/approve/transaction?tokenAddress=${tokenOne.address}`)
+
+    setTxDetails(approve.data);
+    console.log("not approved")
+    return
+
+  }
+
+  const tx = await axios.get(
+    `https://api.1inch.dev/swap/v5.2/1/swap?fromTokenAddress=${tokenOne.address}&toTokenAddress=${tokenTwo.address}&amount=${tokenOneAmount.padEnd(tokenOne.decimals+tokenOneAmount.length, '0')}&fromAddress=${address}&slippage=${slippage}`
+  )
+
+  let decimals = Number(`1E${tokenTwo.decimals}`)
+  setTokenTwoAmount((Number(tx.data.toTokenAmount)/decimals).toFixed(2));
+
+  setTxDetails(tx.data.tx);
+
+}
+
+
+
+useEffect(()=>{
+
+  fetchPrices(tokenList[0].address, tokenList[1].address)
+
+}, [])
+
+useEffect(()=>{
+
+  if(txDetails.to && isConnected){
+    sendTransaction();
+  }
+}, [txDetails])
 
   const settings = (
     <>
@@ -55,6 +143,31 @@ function Swap(props) {
   );
 
   return (
+    <>
+    <Modal
+    open={isOpen}
+    footer={null}
+    onCancel={() => setIsOpen(false)}
+    title="Select a token"
+    >
+      <div className="modalContent">
+      {tokenList?.map((e, i) => {
+            return (
+              <div
+                className="tokenChoice"
+                key={i}
+                onClick={() => modifyToken(i)}
+              >
+                <img src={e.img} alt={e.ticker} className="tokenLogo" />
+                <div className="tokenChoiceNames">
+                  <div className="tokenName">{e.name}</div>
+                  <div className="tokenTicker">{e.ticker}</div>
+                </div>
+              </div>
+            );
+          })}
+      </div>
+    </Modal>
     <div className="tradebox">
     <div className="tradeBoxHeader">
       <h4>Swap</h4>
@@ -76,9 +189,24 @@ function Swap(props) {
             disabled={!prices}
           />
           <Input placeholder="0" value={tokenTwoAmount} disabled={true} />
-          <div className="assetOne"></div>
+          <div className="switchButton" onClick={switchTokens}>
+            <ArrowDownOutlined className="switchArrow" />
+          </div>
+          <div className="assetOne" onClick={() => openModal(1)}>
+          <img src={tokenOne.img} alt="assetOneLogo" className="assetLogo" />
+            {tokenOne.ticker}
+            <DownOutlined />
+          </div>
+          <div className="assetTwo" onClick={() => openModal(2)}>
+          <img src={tokenTwo.img} alt="assetOneLogo" className="assetLogo" />
+            {tokenTwo.ticker}
+            <DownOutlined />
+          </div>
         </div>
+        <div className="swapButton" disabled={!tokenOneAmount || !isConnected} onClick={fetchDexSwap}>Swap</div>
+      
     </div>
+    </>
   )
 }
 
